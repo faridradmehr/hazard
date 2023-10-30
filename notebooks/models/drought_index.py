@@ -35,7 +35,7 @@ class DroughtIndicator:
         lon_chunk_size = 40,
         fs_CIMP6 = s3fs.S3FileSystem(anon=True),
         datasource = NexGddpCmip6()):
-        #Inner Functions
+        # Downloading CIMP6 Data
         def download_dataset(variable,year,gcm,scenario,fs=fs_CIMP6, datasource=datasource):
             scenario_ = "historical" if year < 2015 else scenario
             datapath,_ = datasource.path(gcm=gcm, scenario=scenario_, quantity=variable, year=year)
@@ -87,7 +87,7 @@ class DroughtIndicator:
             with self.s3.open(s3_rechunk_log, 'w') as f:
                 df_log.to_csv(f)
             return        
-
+        ## Downloading the CIMP6 data, rechunking it and saving to S3 bucket
         if delete_existing_log_flag:
             delete_existing_log(self.gcm,self.scenario)
         if download_dataset_flag:
@@ -132,6 +132,7 @@ class DroughtIndicator:
         indicator_years=[2005,2030,2040,2050,2080],
         spei_threshold=[0,-1,-1.5,-2,-2.5,-3,-3.6]
         ):
+        ## Auxilliary functions for calculating and logging
         def get_datachunks(lat_min=lat_min,lat_max=lat_max,lon_min=lon_min,lon_max=lon_max,lat_delta=lat_delta,lon_delta=lon_delta):
             lat_bins = np.arange(lat_min,lat_max + 0.1*lat_delta,lat_delta)
             lon_bins = np.arange(lon_min,lon_max + 0.1*lon_delta,lon_delta)
@@ -269,7 +270,6 @@ class DroughtIndicator:
                 target.write(zarr_root,spei_annual_all)
                 print("SPEI Indicator calculation completed and stored at:\n"+zarr_root+"\n\n")
             return spei_annual_all            
-        
         chunk_names = list(data_chunks.keys())
         num_workers = 4
     ## Calculating SPEI index
@@ -328,7 +328,7 @@ class DroughtIndicator:
                 zarr_root = os.path.join(self.s3_group_path,"SPEI","Aggregated",self.gcm + "_" + self.scenario)
                 zarr_store = s3fs.S3Map(root=zarr_root,s3=self.s3,check=False)
                 ds_spei_all.to_zarr(store=zarr_store,mode='w')
-        #final results --- 20 years of average SPEI 
+        ## Calculating average number of months where 12 - month SPEI index is below thresholds [0,-1,-1.5,-2,-2.5,-3.6] for 20 years period
         months_spei12m_below_set= {}
         print("\n\nProducing and storing indicators ... ")
         for year in indicator_years:                
