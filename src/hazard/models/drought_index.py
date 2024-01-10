@@ -1,6 +1,7 @@
 import logging
 import os, itertools,sys
 from datetime import datetime
+import cftime
 import concurrent.futures
 from pathlib import PurePosixPath
 from pydantic import BaseModel
@@ -295,7 +296,11 @@ class DroughtIndicator:
         lats_all = ds_spei["lat"].values
         lons_all = ds_spei["lon"].values
         spei_annual = np.nan * np.zeros([len(self.spei_threshold), len(lats_all), len(lons_all)])
-        spei_temp = ds_spei.sel(time=slice(period[0], period[1]))
+        try: # in some cases time coordinate is in CFtime format.
+            spei_temp = ds_spei.sel(time=slice(period[0], period[1]))
+        except:
+            period = [cftime.DatetimeNoLeap(central_year - self.window_years // 2, 1, 1), cftime.DatetimeNoLeap(central_year + self.window_years // 2-1, 12, 31)]
+            spei_temp = ds_spei.sel(time=slice(period[0], period[1]))
         spei_temp = spei_temp.compute()
         spei_temp = spei_temp['spei']
         for i in range(len(self.spei_threshold)):
